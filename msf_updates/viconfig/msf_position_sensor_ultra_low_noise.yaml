@@ -1,0 +1,85 @@
+core_main_loop_rate: 100
+
+core_init_filter: false
+pose_sensor/init_scale: 1.0
+pose_sensor/core_fixed_scale: true
+
+# IMU measurement noise
+# These values match GREAT-WHU MEMS_Grade parameters (with 6-10x safety margin)
+# GREAT-WHU uses:
+#   - Gyro: 3e-9 rad/s/√s (we use 1e-8, 10x higher)
+#   - Accel: 1.6e-6 m/s²/√s (we use 1e-5, 6x higher)
+core_noise_acc: 0.083                 # Accelerometer measurement noise (keep existing)
+core_noise_accbias: 0.000010          # 1e-5 m/s²/√s (vs GREAT-WHU 1.6e-6)
+core_noise_gyr: 0.0013                # Gyroscope measurement noise (keep existing)
+core_noise_gyrbias: 0.00000001        # 1e-8 rad/s/√s (vs GREAT-WHU 3e-9)
+
+# GPS measurement noise (same as before)
+pose_sensor/pose_absolute_measurements: true
+pose_sensor/pose_use_fixed_covariance: true
+pose_sensor/pose_measurement_world_sensor: false
+pose_sensor/pose_fixed_p_ic/x: 0.0
+pose_sensor/pose_fixed_p_ic/y: 0.0
+pose_sensor/pose_fixed_p_ic/z: 0.0
+pose_sensor/pose_fixed_scale: 1.0
+
+pose_sensor/pose_noise_meas_p: 0.02   # GPS position noise: 2cm
+pose_sensor/pose_noise_meas_q: 0.02   # GPS orientation noise: 0.02 rad (~1.1°)
+pose_sensor/pose_delay: 0.02          # GPS delay: 20ms
+
+pose_sensor/pose_noise_scale: 0.0
+pose_sensor/core_fixed_bias: false
+pose_sensor/pose_fixed_p_ic: false
+
+# Fuzzy tracking (fixed parameter name)
+core_threshold_p: 50.0
+core_threshold_q: 100.0
+core_threshold_v: 50.0
+core_fuzzy_tracking: 10.0             # FIXED: was "core_fuzzy_tracking_threshold"
+
+# Initial state uncertainty
+# Higher orientation uncertainty allows exploration
+pose_initial_cov_p: 1.0               # Position: 1m²
+pose_initial_cov_v: 1.0               # Velocity: 1 (m/s)²
+pose_initial_cov_q: 1.0               # Orientation: 1 rad² (~57°, high uncertainty OK)
+pose_initial_cov_bw: 0.0001           # Gyro bias: 0.0001 (rad/s)²
+pose_initial_cov_ba: 0.001            # Accel bias: 0.001 (m/s²)²
+pose_initial_cov_L: 1.0               # Scale: 1
+pose_initial_cov_aa: 1.0              # Auxiliary orientation: 1 rad²
+
+# RATIONALE FOR ULTRA-LOW BIAS NOISE:
+#
+# GREAT-WHU MEMS_Grade uses extremely low bias process noise:
+#   GyroBiasProcNoisePSD = 1.0e-4 / mpsh  ≈ 3e-9 rad/s/√s
+#   AcceBiasProcNoisePSD = 1.0e-4 / mgpsh ≈ 1.6e-6 m/s²/√s
+#
+# Our PREVIOUS (PROBLEMATIC) values:
+#   core_noise_gyrbias: 0.00015  (50,000x HIGHER!)
+#   core_noise_accbias: 0.025    (15,625x HIGHER!)
+#
+# This allowed biases to random walk far too fast, causing:
+#   - Gyro bias: 0.78 rad/s (2,800 deg/h) - UNREALISTIC
+#   - Accel bias: 0.6 m/s² (60 mg) - UNREALISTIC
+#   - Position error: 300m+ in 200 seconds - CATASTROPHIC
+#
+# Our NEW (GREAT-WHU-INSPIRED) values:
+#   core_noise_gyrbias: 1e-8  (10x higher than GREAT-WHU, conservative)
+#   core_noise_accbias: 1e-5  (6x higher than GREAT-WHU, conservative)
+#
+# Expected results:
+#   - Gyro bias: < 0.01 rad/s (36 deg/h) - REALISTIC
+#   - Accel bias: < 0.05 m/s² (5 mg) - REALISTIC
+#   - Position error: < 5m after 200 seconds - ACCEPTABLE
+#   - Bias convergence: 30-60 seconds with GPS corrections
+#
+# Philosophy (from GREAT-WHU):
+#   - Treat biases as NEARLY CONSTANT (very slow drift)
+#   - High initial uncertainty allows exploration
+#   - GPS corrections drive bias estimation
+#   - IMU integration is trusted more between GPS updates
+#
+# Testing strategy:
+#   1. Test with this ultra-low noise config first
+#   2. Monitor bias values: should stay < 0.01 rad/s, < 0.05 m/s²
+#   3. If still diverges, consider velocity-based heading initialization
+#   4. Convergence should occur within 30-60 seconds
