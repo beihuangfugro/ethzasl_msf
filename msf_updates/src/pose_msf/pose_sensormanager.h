@@ -75,6 +75,10 @@ class PoseSensorManager : public msf_core::MSF_SensorManagerROS<
     return config_;
   }
 
+  virtual double GetParamFuzzyTrackingThreshold() const {
+    return config_.core_fuzzy_tracking;
+  }
+
  private:
   shared_ptr<msf_core::IMUHandler_ROS<msf_updates::EKFState> > imu_handler_;
   shared_ptr<PoseSensorHandler_T> pose_handler_;
