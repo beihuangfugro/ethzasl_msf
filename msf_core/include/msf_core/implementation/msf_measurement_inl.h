@@ -76,7 +76,7 @@ void MSF_MeasurementBase<EKFState_T>::CalculateAndApplyCorrection(
   // Make sure P stays symmetric.
   P = 0.5 * (P + P.transpose());
 
-  core.ApplyCorrection(state, correction_);
+  core.ApplyCorrection(state, correction_, core.usercalc_.GetParamFuzzyTrackingThreshold());
 }
 
 template<typename EKFState_T>
@@ -120,7 +120,7 @@ void MSF_MeasurementBase<EKFState_T>::CalculateAndApplyCorrection(
   // Make sure P stays symmetric.
   P = 0.5 * (P + P.transpose());
 
-  core.ApplyCorrection(state, correction_);
+  core.ApplyCorrection(state, correction_, core.usercalc_.GetParamFuzzyTrackingThreshold());
 }
 
 template<typename EKFState_T>
@@ -194,7 +194,7 @@ void MSF_MeasurementBase<EKFState_T>::CalculateAndApplyCorrectionRelative(
   // TODO (slynen): EV, set Evalues<eps to zero, then reconstruct.
   state_new->P = 0.5 * (state_new->P + state_new->P.transpose());
 
-  core.ApplyCorrection(state_new, correction_);
+  core.ApplyCorrection(state_new, correction_, core.usercalc_.GetParamFuzzyTrackingThreshold());
 }
 
 template<typename EKFState_T>
